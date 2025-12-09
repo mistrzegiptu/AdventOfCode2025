@@ -1,5 +1,7 @@
 ﻿internal class Program
 {
+    private static Dictionary<(int, int), long> _memo = [];
+
     private static void Main(string[] args)
     {
         var inputData = File.ReadAllLines("../../../input.txt");
@@ -44,34 +46,45 @@
     {
         var (y, x) = index;
 
-        if (y == input.First().Length)
-            return 1;
+        if (_memo.TryGetValue((y, x), out var memoizedResult))
+            return memoizedResult;
 
-        if (x < 0 || y < 0 || x >= input.Length || y >= input.First().Length)
+        if (y == input.Length)
+        {
+            _memo[(y, x)] = 1;
+            return _memo[(y, x)];
+        }
+
+        if (x < 0 || y < 0 || x >= input[0].Length || y >= input.Length)
             return 0;
 
-        if (!splitters.Any((index) => index.Item1 >= y && index.Item2 == x))
-            return 1;
+        if (!splitters.Any(index => index.Item1 >= y && index.Item2 == x))
+        {
+            _memo[(y, x)] = 1;
+            return _memo[(y, x)];
+        }
 
         if (input[y][x] == '^')
         {
-            var leftSplitter = splitters.Where((left) => left.Item1 > y && left.Item2 == x - 1);
-            var rightSplitter = splitters.Where((right) => right.Item1 > y && right.Item2 == x + 1);
+            var leftSplitter = splitters.Where((left) => left.Item1 > y && left.Item2 == x - 1).OrderBy(left => left.Item2);
+            var rightSplitter = splitters.Where((right) => right.Item1 > y && right.Item2 == x + 1).OrderBy(right => right.Item2);
 
-            var evalLeft = leftSplitter.Count() > 0;
-            var evalRight = rightSplitter.Count() > 0;
+            var evalLeft = leftSplitter.Any();
+            var evalRight = rightSplitter.Any();
 
             if (evalLeft && evalRight)
-                return DFS(input, rightSplitter.First(), splitters) + DFS(input, leftSplitter.First(), splitters);
+                _memo[(y, x)] = DFS(input, rightSplitter.First(), splitters) + DFS(input, leftSplitter.First(), splitters);
             else if (evalLeft)
-                return DFS(input, leftSplitter.First(), splitters) + 1;
+                _memo[(y, x)] = DFS(input, leftSplitter.First(), splitters) + 1;
             else if (evalRight)
-                return DFS(input, rightSplitter.First(), splitters) + 1;
+                _memo[(y, x)] = DFS(input, rightSplitter.First(), splitters) + 1;
             else
-                return 2;
+                _memo[(y, x)] = 2;
         }
         else
-            return DFS(input, (y + 1, x), splitters);
+            _memo[(y, x)] = DFS(input, (y + 1, x), splitters);
+
+        return _memo[(y, x)];
     }
 
     private static HashSet<(int, int)> PrecomputeSplitters(string[] input)
