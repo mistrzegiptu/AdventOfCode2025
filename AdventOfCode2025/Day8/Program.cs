@@ -22,9 +22,8 @@ int n = inputData.Count;
 while (junctionBoxes.Count != 1 || queue.Count > 0)
 {
     if(connections == 0)
-    {
         Console.WriteLine(junctionBoxes.OrderByDescending(x => x.Count).Take(3).Select(x => x.Count).Aggregate((x, next) => x * next));
-    }
+
     var (first, second) = queue.Dequeue();
     var box = new HashSet<(long, long, long)>() { first, second };
     if(junctionBoxes.Any(x => x.Overlaps(box)))
@@ -38,13 +37,13 @@ while (junctionBoxes.Count != 1 || queue.Count > 0)
         junctionBoxes.Add(box);
     }
     else
-    {
         junctionBoxes.Add(box);
-    }
+
     if (junctionBoxes.First().Count == n)
     {
         Console.WriteLine(first.Item1 * second.Item1);
         break;
     }
+
     connections--;
 }
