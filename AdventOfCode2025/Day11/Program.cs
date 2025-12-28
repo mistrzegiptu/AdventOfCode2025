@@ -4,7 +4,7 @@
     private const string _serverRackNode = "svr";
     private const string _outNode = "out";
     private const string _dacNode = "dac";
-    private const string _ddtNode = "fft";
+    private const string _fftNode = "fft";
 
     private static void Main(string[] args)
     {
@@ -21,36 +21,35 @@
             graph.Add(label, connected);
 
             foreach (var v in connected)
-                if (!incomingVertices.TryAdd(v, 0))
-                    incomingVertices[v] += 1;
+            {
+                incomingVertices.TryAdd(v, 0);
+                incomingVertices[v]++;
+            }
         }
 
         var outPaths = OutPathsCount(graph);
-        
+
         Console.WriteLine(outPaths);
 
         incomingVertices.Add(_serverRackNode, 0);
+
         var topologicalOrder = TopologicalSort(graph, incomingVertices);
 
-        //foreach (var key in graph.Keys)
-        //{
-        //    Console.Write($"{key} -> ");
-        //    foreach (var connection in graph[key])
-        //    {
-        //        Console.Write($"{connection}, ");
-        //    }
-        //    Console.WriteLine();
-        //}
+        var svrToFft = NumberOfPaths(_serverRackNode, _fftNode, graph, topologicalOrder);
+        var fftToDac = NumberOfPaths(_fftNode, _dacNode, graph, topologicalOrder);
+        var dacToOut = NumberOfPaths(_dacNode, _outNode, graph, topologicalOrder);
+
+        var svrToDac = NumberOfPaths(_serverRackNode, _dacNode, graph, topologicalOrder);
+        var dacToFft = NumberOfPaths(_dacNode, _fftNode, graph, topologicalOrder);
+        var fftToOut = NumberOfPaths(_fftNode, _outNode, graph, topologicalOrder);
+
+        var total = svrToFft * fftToDac * dacToOut + svrToDac * dacToFft * fftToOut;
+        Console.WriteLine(total);
     }
 
     private static int OutPathsCount(Dictionary<string, List<string>> graph)
     {
         return DFS(_startingNode, graph, []);
-    }
-
-    private static int DacAndFftPathsCount(Dictionary<string, List<string>> graph)
-    {
-        return DFSWithTracking(_serverRackNode, graph, [], false, false);
     }
 
     private static int DFS(string currentNode, Dictionary<string, List<string>> graph, HashSet<string> visited)
@@ -98,30 +97,21 @@
         return topologicalOrder;
     }
 
-    private static int DFSWithTracking(string currentNode, Dictionary<string, List<string>> graph, HashSet<string> visited, bool dacVisited, bool fftVisited)
+    private static long NumberOfPaths(string source, string destination, Dictionary<string, List<string>> graph, List<string> topologicalOrder)
     {
-        if (currentNode == _outNode)
-            return dacVisited && fftVisited ? 1 : 0;
-        if (visited.Contains(currentNode))
-            return 0;
-        if (currentNode == _dacNode)
-            dacVisited = true;
-        else if (currentNode == _ddtNode)
-            fftVisited = true;
+        Dictionary<string, long> paths = [];
+        topologicalOrder.ForEach(v => paths.Add(v, 0));
+        paths[source] = 1L;
 
-        if (!graph.TryGetValue(currentNode, out var neighbors))
-            return 0;
-
-        visited.Add(currentNode);
-
-        int sum = 0;
-        for (int i = 0; i < neighbors.Count; i++)
+        foreach (var node in topologicalOrder)
         {
-            sum += DFSWithTracking(neighbors[i], graph, visited, dacVisited, fftVisited);
+            if (node == _outNode)
+                continue;
+
+            foreach (var connected in graph[node])
+                paths[connected] += paths[node];
         }
 
-        visited.Remove(currentNode);
-
-        return sum;
+        return paths[destination];
     }
 }
